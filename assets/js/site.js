@@ -60,4 +60,38 @@
       if (e.key === "Escape" && lb.classList.contains("open")) { lb.classList.remove("open"); lbImg.src = ""; document.body.style.overflow = ""; }
     });
   }
+
+  /* ---- Per-project photo slideshows (multiple, autoplay only while visible) ---- */
+  document.querySelectorAll("[data-slideshow]").forEach(function (ss) {
+    var slides = Array.prototype.slice.call(ss.querySelectorAll(".ss-slide"));
+    if (slides.length < 2) return;
+    var dotsWrap = ss.querySelector(".ss-dots");
+    var count = ss.querySelector(".ss-count");
+    var i = 0, dots = [], timer = null;
+    slides.forEach(function (_, n) {
+      var b = document.createElement("button");
+      b.type = "button"; b.setAttribute("aria-label", "Photo " + (n + 1));
+      if (n === 0) b.className = "is-active";
+      b.addEventListener("click", function () { go(n); restart(); });
+      dotsWrap.appendChild(b); dots.push(b);
+    });
+    function upd() {
+      slides.forEach(function (s, n) { s.classList.toggle("is-active", n === i); });
+      dots.forEach(function (d, n) { d.classList.toggle("is-active", n === i); });
+      if (count) count.textContent = (i + 1) + " / " + slides.length;
+    }
+    function go(n) { i = (n + slides.length) % slides.length; upd(); }
+    ss.querySelector(".ss-prev").addEventListener("click", function () { go(i - 1); restart(); });
+    ss.querySelector(".ss-next").addEventListener("click", function () { go(i + 1); restart(); });
+    function start() { if (!timer) timer = setInterval(function () { go(i + 1); }, 5500); }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function restart() { stop(); start(); }
+    upd();
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { e.isIntersecting ? start() : stop(); });
+      }, { threshold: 0.4 }).observe(ss);
+    } else { start(); }
+  });
+
 })();
