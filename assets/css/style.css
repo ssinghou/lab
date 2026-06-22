@@ -94,9 +94,11 @@ p{margin:0 0 1rem}
   background-size:cover;background-position:center}
 .hero__slide.is-active{opacity:1}
 .hero::after{content:"";position:absolute;inset:0;
-  background:linear-gradient(180deg,rgba(20,10,12,.15),rgba(20,10,12,.62))}
-.hero__inner{position:absolute;inset:auto 0 0 0;z-index:2;color:#fff}
+  background:linear-gradient(180deg,rgba(15,8,10,.45),rgba(15,8,10,.4) 50%,rgba(15,8,10,.62))}
+.hero__inner{position:absolute;inset:0;z-index:2;color:#fff;display:flex;align-items:center}
 .hero__inner .wrap{padding-block:clamp(22px,4vw,52px)}
+.hero__logo{position:absolute;top:16px;left:calc(var(--pad) - 18px);z-index:3;
+  width:clamp(74px,8.5vw,108px);height:auto;filter:drop-shadow(0 3px 10px rgba(0,0,0,.45))}
 .hero h1{color:#fff;max-width:18ch;text-shadow:0 2px 18px rgba(0,0,0,.35)}
 .hero .eyebrow{color:#f1d9c2}
 .hero__cap{font-size:.84rem;color:rgba(255,255,255,.86);margin:.6rem 0 0;
@@ -106,7 +108,8 @@ p{margin:0 0 1rem}
 .hero__dots button{width:9px;height:9px;border-radius:50%;border:0;cursor:pointer;
   background:rgba(255,255,255,.45);padding:0}
 .hero__dots button.is-active{background:#fff;transform:scale(1.25)}
-@media (max-width:700px){.hero{aspect-ratio:3/4;min-height:460px}}
+@media (max-width:700px){.hero{aspect-ratio:3/4;min-height:460px}
+  .hero__logo{top:12px;left:calc(var(--pad) - 12px);width:64px}}
 
 /* ---------- Buttons ---------- */
 .btn{display:inline-flex;align-items:center;gap:.5em;background:var(--maroon);color:#fff;
