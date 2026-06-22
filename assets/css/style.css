@@ -58,10 +58,9 @@ p{margin:0 0 1rem}
 .brand{display:flex;align-items:center;gap:12px;font-family:var(--font-display);
   font-weight:600;font-size:1.06rem;color:var(--ink);text-decoration:none;line-height:1.1}
 .brand:hover{text-decoration:none}
-.brand .mark{width:38px;height:38px;border-radius:9px;flex:0 0 auto;
-  background:linear-gradient(150deg,var(--maroon),var(--maroon-deep));
-  display:grid;place-items:center;color:#fff;font-weight:700;font-size:1rem;
-  font-family:var(--font-body);letter-spacing:.02em}
+.brand .mark{width:44px;height:44px;flex:0 0 auto;
+  background:url("../../images/logo_seal.png") center/contain no-repeat;
+  font-size:0;line-height:0}
 .brand small{display:block;font-family:var(--font-body);font-weight:500;
   font-size:.72rem;letter-spacing:.04em;color:var(--ink-soft)}
 .nav-links{display:flex;align-items:center;gap:4px;list-style:none;margin:0;padding:0}
