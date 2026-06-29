@@ -21,17 +21,26 @@
     })();
   }
 
-  // Probe a folder for 1,2,3,… until one is missing: cb([urls])
+  // Probe a folder for photos numbered 1,2,3,…  Tolerates small gaps and mixed
+  // capitalization; remembers the last working extension to stay fast. cb([urls])
   function probeFolder(folder, cb) {
     folder = (folder || "").replace(/\/+$/, "");
-    var urls = [], MAX = 80;
-    (function tryNum(n) {
-      if (n > MAX) return cb(urls);
-      findImage(folder + "/" + n, function (url) {
-        if (url) { urls.push(url); tryNum(n + 1); }
-        else cb(urls);
-      });
-    })(1);
+    var urls = [], MAX = 60, GAP = 4, lastExt = null;
+    function tryNum(n, misses) {
+      if (n > MAX || misses >= GAP) return cb(urls);
+      var order = lastExt ? [lastExt].concat(IMG_EXTS.filter(function (e) { return e !== lastExt; })) : IMG_EXTS;
+      var k = 0;
+      (function tryExt() {
+        if (k >= order.length) return tryNum(n + 1, misses + 1);   // this number is missing
+        var ext = order[k++];
+        var url = folder + "/" + n + "." + ext;
+        var img = new Image();
+        img.onload = function () { lastExt = ext; urls.push(url); tryNum(n + 1, 0); };
+        img.onerror = tryExt;
+        img.src = url;
+      })();
+    }
+    tryNum(1, 0);
   }
 
   /* ---- Mobile navigation toggle ---- */
@@ -46,6 +55,12 @@
       if (e.target.tagName === "A") { links.classList.remove("open"); toggle.setAttribute("aria-expanded", "false"); }
     });
   }
+
+  /* ---- Research-highlight cards: fill each image with its project's first photo ---- */
+  Array.prototype.forEach.call(document.querySelectorAll("img[data-first-from]"), function (img) {
+    var folder = (img.getAttribute("data-first-from") || "").replace(/\/+$/, "");
+    findImage(folder + "/1", function (url) { if (url) img.src = url; });
+  });
 
   /* ---- Home hero slideshow: first photo of each project ---- */
   var hero = document.querySelector(".hero");
