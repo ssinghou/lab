@@ -61,8 +61,13 @@
     });
   }
 
-  /* ---- Per-project photo slideshows (multiple, autoplay only while visible) ---- */
-  document.querySelectorAll("[data-slideshow]").forEach(function (ss) {
+  /* ---- Per-project photo slideshows ----
+     Folder-driven: each .slideshow[data-folder] shows every image in its folder,
+     whatever the filenames are. The file list comes from the GitHub API (see
+     below), images are sorted by name, and the slideshow stays hidden if the
+     folder has no images yet. Autoplays only while scrolled into view. */
+
+  function initProjectSlideshow(ss) {
     var slides = Array.prototype.slice.call(ss.querySelectorAll(".ss-slide"));
     if (slides.length < 2) return;
     var dotsWrap = ss.querySelector(".ss-dots");
@@ -92,6 +97,104 @@
         entries.forEach(function (e) { e.isIntersecting ? start() : stop(); });
       }, { threshold: 0.4 }).observe(ss);
     } else { start(); }
-  });
+  }
+
+  function renderProjectSlides(ss, urls) {
+    if (!urls.length) return;            // empty folder → stays hidden
+    var altBase = ss.getAttribute("data-alt") || "Project photo";
+    var track = document.createElement("div");
+    track.className = "ss-track";
+    urls.forEach(function (u, n) {
+      var fig = document.createElement("figure");
+      fig.className = "ss-slide" + (n === 0 ? " is-active" : "");
+      var im = document.createElement("img");
+      im.src = u; im.loading = "lazy";
+      im.alt = altBase + ", photo " + (n + 1);
+      fig.appendChild(im); track.appendChild(fig);
+    });
+    ss.appendChild(track);
+    ss.hidden = false;
+    if (urls.length < 2) return;         // single photo → no controls
+    [["ss-prev", "Previous photo", "\u2039"], ["ss-next", "Next photo", "\u203a"]].forEach(function (a) {
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.className = "ss-arrow " + a[0];
+      btn.setAttribute("aria-label", a[1]); btn.innerHTML = a[2];
+      ss.appendChild(btn);
+    });
+    var dots = document.createElement("div"); dots.className = "ss-dots"; ss.appendChild(dots);
+    var count = document.createElement("span"); count.className = "ss-count"; ss.appendChild(count);
+    initProjectSlideshow(ss);
+  }
+
+  /* Ask GitHub once for the repo's whole file list (one request), then show
+     whatever images live in each project folder — any filenames, any count.
+     Result is cached briefly so repeat visits don't re-hit the API; a stale
+     cache is reused if a later request is unavailable (e.g. rate-limited). */
+  var IMG_RE = /\.(jpe?g|png|webp|gif|avif)$/i;
+  var CACHE_KEY = "ess_photo_tree_v1";
+  var CACHE_TTL = 30 * 60 * 1000;   // 30 minutes
+
+  function repoInfo() {
+    var owner = "ssinghou", repo = "lab", branch = "main";   // fallbacks
+    try {
+      if (/\.github\.io$/i.test(location.hostname)) {
+        owner = location.hostname.split(".")[0] || owner;
+        var seg = location.pathname.split("/").filter(Boolean)[0];
+        if (seg) repo = seg;
+      }
+    } catch (e) {}
+    return { owner: owner, repo: repo, branch: branch };
+  }
+
+  function readCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY)); } catch (e) { return null; }
+  }
+  function writeCache(paths) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), paths: paths })); } catch (e) {}
+  }
+
+  function fetchTree(cb) {
+    var r = repoInfo();
+    var url = "https://api.github.com/repos/" + r.owner + "/" + r.repo +
+              "/git/trees/" + r.branch + "?recursive=1";
+    if (!window.fetch) return cb(null);
+    fetch(url, { headers: { "Accept": "application/vnd.github+json" } })
+      .then(function (res) { if (!res.ok) throw new Error("http"); return res.json(); })
+      .then(function (d) {
+        if (!d || !d.tree) return cb(null);
+        cb(d.tree.filter(function (t) { return t.type === "blob"; })
+                 .map(function (t) { return t.path; }));
+      })
+      .catch(function () { cb(null); });
+  }
+
+  function getTree(cb) {
+    var cached = readCache();
+    if (cached && cached.paths && (Date.now() - cached.t) < CACHE_TTL) { cb(cached.paths); return; }
+    fetchTree(function (paths) {
+      if (paths) { writeCache(paths); cb(paths); }
+      else if (cached && cached.paths) { cb(cached.paths); }   // stale-on-error
+      else cb(null);
+    });
+  }
+
+  function applyFolders(paths) {
+    document.querySelectorAll("[data-slideshow][data-folder]").forEach(function (ss) {
+      var folder = (ss.getAttribute("data-folder") || "").replace(/\/+$/, "") + "/";
+      var files = (paths || []).filter(function (p) {
+        return p.indexOf(folder) === 0 &&            // inside this folder
+               p.slice(folder.length).indexOf("/") === -1 &&   // not a sub-subfolder
+               IMG_RE.test(p);                        // is an image
+      }).sort(function (a, b) {
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+      });
+      renderProjectSlides(ss, files);   // repo paths == site-relative paths
+    });
+  }
+
+  if (document.querySelector("[data-slideshow][data-folder]")) {
+    getTree(function (paths) { applyFolders(paths); });
+  }
+  document.querySelectorAll("[data-slideshow]:not([data-folder])").forEach(initProjectSlideshow);
 
 })();
